@@ -1,0 +1,26 @@
+name: big
+on:
+  workflow_dispatch:
+    inputs:
+      hold: { default: "250" }
+      u: { default: "80" }
+      dur: { default: "120" }
+      shards: { default: "60" }
+      tag: { default: "big" }
+jobs:
+  go:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy: { max-parallel: 60, fail-fast: false }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "22" }
+      - env: { HOLD: "${{ inputs.hold }}", U: "${{ inputs.u }}", DUR: "${{ inputs.dur }}", TAG: "${{ inputs.tag }}-${{ strategy.job-index }}" }
+        run: |
+          [ "${{ strategy.job-index }}" -ge "${{ inputs.shards }}" ] && exit 0
+          echo "ip $(curl -s https://api.ipify.org) job ${{ strategy.job-index }}"
+          node combined.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: "l-${{ inputs.tag }}-${{ strategy.job-index }}", path: "*.txt", if-no-files-found: ignore }
